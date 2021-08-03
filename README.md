@@ -25,13 +25,14 @@ cd Smartphone-Doorlock
 Install the dependencies (if it fails, delete node_modules and retry without sudo)
 
 ```
-sudo npm install
+sudo npm ci
 ```
 
-Add the Blynk auth token by opening up the `doorlock.js` file and replacing the `blynkToken` variable.
+Add the Blynk auth token by creating `.env` file and setting the `BLYNK_TOKEN` variable.
 
 ```
-vim doorlock.js
+# .env
+BLYNK_TOKEN=<actual_token>
 ```
 
 Scroll down, press `i` to edit in vim, and replace the token between the single quotes. Press `esc` then type `:wq` to save and quit.

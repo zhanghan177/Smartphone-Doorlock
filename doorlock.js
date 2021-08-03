@@ -30,14 +30,16 @@
 // project
 //
 // **************************************** //
+require('dotenv').config();
+
 var unlockedState = 1000;
 var lockedState = 2200;
 
 var motorPin = 14;
-var buttonPin = 4
-var ledPin = 17
+var buttonPin = 4;
+var ledPin = 17;
 
-var blynkToken = 'blynk_token_here';
+var blynkToken = process.env.BLYNK_TOKEN;
 
 // *** Start code *** //
 
@@ -55,7 +57,8 @@ var Gpio = require('pigpio').Gpio,
 
 //Setup blynk
 var Blynk = require('blynk-library');
-var blynk = new Blynk.Blynk(blynkToken);
+//var blynk = new Blynk.Blynk(blynkToken);
+var blynk = new Blynk.Blynk(blynkToken,  options = { connector : new Blynk.TcpClient({addr: 'blynk.cloud'})});
 var v0 = new blynk.VirtualPin(0);
 
 console.log("locking door")
