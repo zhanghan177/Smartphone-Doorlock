@@ -35,7 +35,7 @@ require('dotenv').config();
 var unlockedState = 1000;
 var lockedState = 2200;
 
-var motorPin = 14;
+// var motorPin = 14;
 var buttonPin = 4;
 var ledPin = 17;
 
@@ -47,7 +47,7 @@ var locked = true
 
 //Setup servo
 var Gpio = require('pigpio').Gpio,
-  motor = new Gpio(motorPin, {mode: Gpio.OUTPUT}),
+  // motor = new Gpio(motorPin, {mode: Gpio.OUTPUT}),
   button = new Gpio(buttonPin, {
     mode: Gpio.INPUT,
     pullUpDown: Gpio.PUD_DOWN,
@@ -57,7 +57,6 @@ var Gpio = require('pigpio').Gpio,
 
 //Setup blynk
 var Blynk = require('blynk-library');
-//var blynk = new Blynk.Blynk(blynkToken);
 var blynk = new Blynk.Blynk(blynkToken,  options = { connector : new Blynk.TcpClient({addr: 'blynk.cloud'})});
 var v0 = new blynk.VirtualPin(0);
 
@@ -90,25 +89,25 @@ blynk.on('connect', function() { console.log("Blynk ready."); });
 blynk.on('disconnect', function() { console.log("DISCONNECT"); });
 
 function lockDoor() {
-	motor.servoWrite(lockedState);
+	// motor.servoWrite(lockedState);
 	led.digitalWrite(1);
 	locked = true
 
 	//notify
   	blynk.notify("Door has been locked!");
   	
-  	//After 1.5 seconds, the door lock servo turns off to avoid stall current
-  	setTimeout(function(){motor.servoWrite(0)}, 1500)
+  	// //After 1.5 seconds, the door lock servo turns off to avoid stall current
+  	// setTimeout(function(){motor.servoWrite(0)}, 1500)
 }
 
 function unlockDoor() {
-	motor.servoWrite(unlockedState);
+	// motor.servoWrite(unlockedState);
 	led.digitalWrite(0);
 	locked = false
 
 	//notify
   	blynk.notify("Door has been unlocked!"); 
 
-  	//After 1.5 seconds, the door lock servo turns off to avoid stall current
-  	setTimeout(function(){motor.servoWrite(0)}, 1500)
+  	// //After 1.5 seconds, the door lock servo turns off to avoid stall current
+  	// setTimeout(function(){motor.servoWrite(0)}, 1500)
 }
