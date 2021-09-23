@@ -41,27 +41,98 @@ var ledPin = 17;
 
 var blynkToken = process.env.BLYNK_TOKEN;
 
+var serverIp = '0.0.0.0';
+var serverPort = 3000;
+
+var CHECK_CERT = true;
+var CERTIFICATE_CONTENT_KEY = "certContent";
+var CERTIFICATE_SIGNATURE_KEY = "certSign";
+
+
 // *** Start code *** //
 
 var locked = true
 
 //Setup servo
 var Gpio = require('pigpio').Gpio,
-  motor = new Gpio(motorPin, {mode: Gpio.OUTPUT}),
-  button = new Gpio(buttonPin, {
-    mode: Gpio.INPUT,
-    pullUpDown: Gpio.PUD_DOWN,
-    edge: Gpio.FALLING_EDGE
-  }),
-  led = new Gpio(ledPin, {mode: Gpio.OUTPUT});
+	motor = new Gpio(motorPin, { mode: Gpio.OUTPUT }),
+	button = new Gpio(buttonPin, {
+		mode: Gpio.INPUT,
+		pullUpDown: Gpio.PUD_DOWN,
+		edge: Gpio.FALLING_EDGE
+	}),
+	led = new Gpio(ledPin, { mode: Gpio.OUTPUT });
 
 //Setup blynk
 var Blynk = require('blynk-library');
-var blynk = new Blynk.Blynk(blynkToken,  options = { connector : new Blynk.TcpClient({addr: 'blynk.cloud'})});
+var blynk = new Blynk.Blynk(blynkToken, options = { connector: new Blynk.TcpClient({ addr: 'blynk.cloud' }) });
 var v0 = new blynk.VirtualPin(0);
+
+
+// Setup POST request sender
+var request = require('request');
+function postVerify(postData, res, cb) {
+	var clientServerOptions = {
+		uri: 'http://127.0.0.1:9020/verify',
+		body: JSON.stringify(postData),
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	}
+	request(clientServerOptions, function (error, response) {
+		console.log(error, response.body);
+		cb(response.body, res);
+		return;
+	});
+}
+
+
+// Setup Express server
+var express = require('express')
+var app = express();
 
 console.log("locking door")
 lockDoor()
+
+
+app.listen(3000, '0.0.0.0', () => {
+	console.log("Server running on port 3000");
+});
+
+app.get("/url", (req, res, next) => {
+	res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
+});
+
+app.get("/lock", (req, res, next) => {
+	if (CHECK_CERT) {
+		postVerify(req.query, res, function (v_res_str, res) {
+			console.log(v_res_str);
+			var v_json = JSON.parse(v_res_str);
+			console.log(v_json.succeed);
+
+			if (v_json.succeed) {
+				if (locked) {
+					unlockDoor()
+				} else {
+					lockDoor()
+				}
+			} else {
+				console.log("Failed at verify");
+			}
+
+			res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
+		});
+	} else {
+		if (locked) {
+			unlockDoor()
+		} else {
+			lockDoor()
+		}
+		res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
+	}
+});
+
 
 button.on('interrupt', function (level) {
 	console.log("level: " + level + " locked: " + locked)
@@ -74,19 +145,19 @@ button.on('interrupt', function (level) {
 	}
 });
 
-v0.on('write', function(param) {
+v0.on('write', function (param) {
 	console.log('V0:', param);
-  	if (param[0] === '0') { //unlocked
-  		unlockDoor()
-  	} else if (param[0] === '1') { //locked
-  		lockDoor()
-  	} else {
-  		blynk.notify("Door lock button was pressed with unknown parameter");
-  	}
+	if (param[0] === '0') { //unlocked
+		unlockDoor()
+	} else if (param[0] === '1') { //locked
+		lockDoor()
+	} else {
+		blynk.notify("Door lock button was pressed with unknown parameter");
+	}
 });
 
-blynk.on('connect', function() { console.log("Blynk ready."); });
-blynk.on('disconnect', function() { console.log("DISCONNECT"); });
+blynk.on('connect', function () { console.log("Blynk ready."); });
+blynk.on('disconnect', function () { console.log("DISCONNECT"); });
 
 function lockDoor() {
 	motor.servoWrite(lockedState);
@@ -94,10 +165,10 @@ function lockDoor() {
 	locked = true
 
 	//notify
-  	blynk.notify("Door has been locked!");
-  	
-  	//After 1.5 seconds, the door lock servo turns off to avoid stall current
-  	setTimeout(function(){motor.servoWrite(0)}, 1500)
+	blynk.notify("Door has been locked!");
+
+	//After 1.5 seconds, the door lock servo turns off to avoid stall current
+	setTimeout(function () { motor.servoWrite(0) }, 1500)
 }
 
 function unlockDoor() {
@@ -106,8 +177,8 @@ function unlockDoor() {
 	locked = false
 
 	//notify
-  	blynk.notify("Door has been unlocked!"); 
+	blynk.notify("Door has been unlocked!");
 
-  	//After 1.5 seconds, the door lock servo turns off to avoid stall current
-  	setTimeout(function(){motor.servoWrite(0)}, 1500)
+	//After 1.5 seconds, the door lock servo turns off to avoid stall current
+	setTimeout(function () { motor.servoWrite(0) }, 1500)
 }
