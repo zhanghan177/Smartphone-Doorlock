@@ -31,6 +31,7 @@
 //
 // **************************************** //
 require('dotenv').config();
+const fs = require('fs')
 
 var unlockedState = 1000;
 var lockedState = 2200;
@@ -48,6 +49,8 @@ var CHECK_CERT = true;
 var CERTIFICATE_CONTENT_KEY = "certContent";
 var CERTIFICATE_SIGNATURE_KEY = "certSign";
 
+var EVAL_FILE = "eval-doorlock.csv"
+var REPS = 100
 
 // *** Start code *** //
 
@@ -71,7 +74,7 @@ var v0 = new blynk.VirtualPin(0);
 
 // Setup POST request sender
 var request = require('request');
-function postVerify(postData, res, cb) {
+function postVerify(postData, res, startTime, reps, cb) {
 	var clientServerOptions = {
 		uri: 'http://127.0.0.1:9020/verify',
 		body: JSON.stringify(postData),
@@ -82,7 +85,7 @@ function postVerify(postData, res, cb) {
 	}
 	request(clientServerOptions, function (error, response) {
 		console.log(error, response.body);
-		cb(response.body, res);
+		cb(response.body, res, startTime, reps);
 		return;
 	});
 }
@@ -105,6 +108,8 @@ app.get("/url", (req, res, next) => {
 });
 
 app.get("/lock", (req, res, next) => {
+	var startTime = new Date();
+
 	if (CHECK_CERT) {
 		postVerify(req.query, res, function (v_res_str, res) {
 			console.log(v_res_str);
@@ -119,6 +124,7 @@ app.get("/lock", (req, res, next) => {
 				}
 			} else {
 				console.log("Failed at verify");
+				return;
 			}
 
 			res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
@@ -131,7 +137,69 @@ app.get("/lock", (req, res, next) => {
 		}
 		res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
 	}
+
+	var endTime = new Date();
+	var timeDiff = endTime - startTime;  //in ms 
+
+	fs.writeFileSync(EVAL_FILE, timeDiff.toString() + '\n', { flag: 'a+' });
 });
+
+
+function lock_repeats(startTime, req, res, reps) {
+	postVerify(req.query, res, startTime, reps, function (v_res_str, res, startTime, reps) {
+		console.log(v_res_str);
+		var v_json = JSON.parse(v_res_str);
+		console.log(v_json.succeed);
+
+		if (v_json.succeed) {
+			if (locked) {
+				unlockDoor()
+			} else {
+				lockDoor()
+			}
+		} else {
+			console.log("Failed at verify");
+			return;
+		}
+
+		var endTime = new Date();
+		var timeDiff = endTime - startTime;  //in ms 
+
+		fs.writeFileSync(EVAL_FILE, timeDiff.toString() + '\n', { flag: 'a+' });
+
+		reps -= 1;
+		if (reps <= 0) {
+			res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
+		}
+		else {
+			(new Promise(r => setTimeout(r, 2000))).then(() => {
+				lock_repeats(new Date(), req, res, reps);
+			}
+			);
+		}
+	});
+}
+
+app.get("/lock-repeats", (req, res, next) => {
+	var startTime = new Date();
+
+	if (CHECK_CERT) {
+		return lock_repeats(startTime, req, res, REPS);
+	} else {
+		if (locked) {
+			unlockDoor()
+		} else {
+			lockDoor()
+		}
+		res.json(["Tony", "Lisa", "Michael", "Ginger", "Food"]);
+
+		var endTime = new Date();
+		var timeDiff = endTime - startTime;  //in ms 
+
+		fs.writeFileSync(EVAL_FILE, timeDiff.toString() + '\n', { flag: 'a+' });
+	}
+});
+
 
 
 button.on('interrupt', function (level) {
